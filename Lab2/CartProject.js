@@ -1,0 +1,110 @@
+import readline from "readline/promises";
+import {stdin, stdout} from "process";
+import { writeFile, readFile, appendFile } from "fs/promises";
+import { log } from "console";
+import { join } from "path";
+
+//Database using file starts
+const FILE = "product.json";
+
+const getCart = async ()=>{
+    const data = await readFile(FILE,"utf-8");
+    return JSON.parse(data);
+};
+const saveCart = async (cart)=>{
+    await writeFile(FILE,JSON.stringify(cart,null,2));    
+};
+const addToCart = async (product)=>{
+    const cart = await getCart();
+    const isfoundInCart = cart.find((item) => item.id === product.id);
+    if(isfoundInCart){
+        isfoundInCart.qty += 1;
+    }
+    else{
+        cart.push(product);
+    }
+    await saveCart(cart);
+    console.log(`${product.name} added to cart`);
+};
+const displayCart = async () => {
+    const cart = await getCart();
+    if(cart.length == 0){
+        console.log('\n\n🛒 is empty\n');
+        return;
+    }
+    console.table(cart);
+    const total = cart.reduce((sum,item)=>sum+item.price*item.qty,0);
+    console.log(`Total payable amount Rs. ${total}`);
+};
+const removeProduct = async (pid)=>{
+    const cart = await getCart();
+    const isfoundInCart = cart.find((item) => item.id === pid);
+    let x = cart.length;
+    const newProduct = cart.filter((item)=> item.id !== pid);
+    let y = newProduct.length;
+    if(y<x){
+        console.log(`Product with id ${pid} is removed form cart`);
+        await saveCart(newProduct);
+    }
+    else{
+        console.log(`Product with id ${pid} not found`);
+    }
+};
+const updateQuantity = async (pid) => {
+    const cart = await getCart();
+    const isfoundInCart = cart.find((item) => item.id === pid);
+    if(isfoundInCart){
+        isfoundInCart.qty += 1;
+        await saveCart(cart);
+        console.log(`${isfoundInCart.name} quantity updated from 🛒`);
+    }
+    else{
+        console.log(`Product wiht id ${pid} not found`);
+    }
+};
+
+const main = async () => {
+    let choice;
+    const cin = readline.createInterface({input: stdin, output: stdout});
+    do{
+    console.log("main is working 🛒");
+    console.log("1........Show Cart");
+    console.log("2........Add Product");
+    console.log("3........Remove Product");
+    console.log("4........Update Quantity");
+    console.log("5........Checkout");
+    choice = await cin.question('Enter your choice: ');
+    switch(Number(choice)){
+        case 1:
+             await displayCart();
+            break;
+        case 2:
+            const item = await cin.question("Enter id,name,price,qty : ");
+            const [id,name,price,qty] = item.split(',').map((p)=>p.trim());
+            await addToCart({
+                id: Number(id),
+                name,
+                price: Number(price),
+                qty: Number(qty),
+            });
+            break;
+        case 3:
+            let pid = await cin.question("Enter product id : ");
+            await removeProduct(Number(pid));
+            break;
+        case 4:
+            let pid2 = await cin.question("Enter product id : ");
+            await updateQuantity(Number(pid2));            
+            break;
+        case 5:
+            console.log('checkout');
+            break;
+        default:
+            console.log("🔴 invalid choice! Try again");                         
+    }
+    }
+    while(choice != 5);
+    cin.close();
+};
+
+main();
